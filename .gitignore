@@ -1,0 +1,4 @@
+.vscode/
+src/includes/__pycache__
+plan.txt
+test.py

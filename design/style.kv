@@ -1,0 +1,25 @@
+#:kivy 2.3.1
+
+MDBoxLayout:
+    orientation: 'horizontal'
+
+    MDBoxLayout:
+        orientation: 'vertical'
+        size_hint_x: 0.2
+
+        MDLabel:
+            size_hint_y: 0.3
+            text: 'Logo goes here'
+            halign: 'center'
+        
+        BoxLayout:
+            Button:
+                text: 'graph boxes go here'
+                halign: 'center'
+        
+        MDLabel:
+            size_hint_y: 0.2
+            text: 'settings_panel'
+            halign: 'center'
+
+    CartesianCoordinateSystem:
