@@ -20,6 +20,8 @@ from pathlib import Path
 
 from kivy.metrics import dp
 
+from includes import geoshape as gs
+
 """
     Rules:
     1. All the work is to be done in numeric coordinates and only convert them to pixels when updating the mesh
@@ -272,6 +274,7 @@ class CartesianCoordinateSystem(StencilView, Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+
         self.root_dir = Path(__file__).resolve().parents[2]
         self.font_path = str(self.root_dir / 'resources' / 'IosevkaTermNerdFont-Medium.ttf')
 
@@ -319,6 +322,7 @@ class CartesianCoordinateSystem(StencilView, Widget):
         )
 
         self.update_plane()
+        print(gs.generate_domain(self.x_min, self.x_max, 100))
 
     # Tick generating functions: Basically create the visible major ticks on the screen using x_min as ref
 
