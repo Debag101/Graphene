@@ -202,7 +202,9 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
 
     def get_label(self, major_ticks, axis):
+
         axes_index = {'x': 0, 'y': 1}
+
         if axis not in axes_index:
             return
         
@@ -212,6 +214,7 @@ class CartesianCoordinateSystem(StencilView, Widget):
             label_pos = self.point_to_pixel(tick)
             
             if abs(tick[index]) <= 1e-10: 
+
                 if axis == 'y':
                     continue  
                 else:
@@ -223,31 +226,53 @@ class CartesianCoordinateSystem(StencilView, Widget):
                     label_pos = (label_pos[0] + 5, label_pos[1])
 
             if not tick[index].is_integer():
-                p = self.precision * -1 + 1
-                label_txt = f'{tick[index]:.{p}f}'
+                p = (self.precision * -1) + 1
+
+                label_txt = f'{tick[index]: .{p}f}'
                 if label_txt == '-0.0':
                     label_txt = '0.0'
+
             else:
                 label_txt = f'{int(tick[index])}'
 
-            # c = ColorProperty([0, 0, 0, 1])
+            # c = ColorProperty(colormap='black')
+            c = (0, 0, 0, 1)
+            
+            if axis == 'y':
+                replace_label_pos = list(label_pos)
 
+                if label_pos[0] <= self.x:
+                    replace_label_pos[0] = self.x + 5
+                    label_pos = tuple(replace_label_pos)
+                    c = (0.33, 0.33, 0.33, 0.5)
+                
+                elif label_pos[0] >= self.x + self.width:
+                    replace_label_pos[0] = self.x + self.width - 5
+                    label_pos = tuple(label_pos)
+                    c = (0.33, 0.33, 0.33, 0.5)
             
-            # if axis == 'y' and label_pos[0] < self.x:
-            #     label_pos[0] = self.x + 10
-            #     c = [0, 0, 0, 0.4]
             
-            # if axis == 'x' and label_pos[1] < self.y:
-            #     label_pos[1] = self.y + 10
-            #     c = [0, 0, 0, 0.4]
+            if axis == 'x':
+                replace_label_pos = list(label_pos)
+
+                if label_pos[1] <= self.y:
+                    replace_label_pos[1] = self.y + 5
+                    label_pos = tuple(replace_label_pos)
+                    c = (0.33, 0.33, 0.33, 0.5)
+
+                elif label_pos[1] >= self.top:
+                    replace_label_pos[1] = self.top - 5
+                    label_pos = tuple(replace_label_pos)
+                    c = (0.33, 0.33, 0.33, 0.5)
                 
 
             label = CoreLabel(
                         text=label_txt, 
                         font_size=20,
-                        color=(0, 0, 0, 1), 
+                        color=c, 
                         font_name=self.font_path
                     )
+            
             label.refresh()
             label_texture = label.texture
             self.label_widgets.add(Rectangle(pos=label_pos, texture=label_texture, size=label_texture.size))
