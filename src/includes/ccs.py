@@ -110,7 +110,6 @@ class CartesianCoordinateSystem(StencilView, Widget):
     def on_touch_down(self, touch):
 
         if touch.is_mouse_scrolling:
-            print("zoom detected")
             self.handle_zoom(touch)
 
 
@@ -133,8 +132,6 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
         if projected_scale_factor == 1000:
             return
-        
-        print('projected scale factor', projected_scale_factor)
 
         zoom_anim = Animation(scale_factor=projected_scale_factor, duration=0.15, transition='out_circ')
 
@@ -194,8 +191,6 @@ class CartesianCoordinateSystem(StencilView, Widget):
         self.unit_x = base * (10 ** (power - 1))
         self.unit_y = self.unit_x
 
-        print(self.unit_x, log_of_step, power, base, fractional_part)
-
         self.unit_minor_x = self.unit_x / 5
         self.unit_minor_y = self.unit_minor_x
         self.precision = power
@@ -214,11 +209,8 @@ class CartesianCoordinateSystem(StencilView, Widget):
             label_pos = self.point_to_pixel(tick)
             
             if abs(tick[index]) <= 1e-10: 
+                continue
 
-                if axis == 'y':
-                    continue  
-                else:
-                    label_pos = (label_pos[0] + 5, label_pos[1] + 5)
             else:
                 if axis == 'x':
                     label_pos = (label_pos[0], label_pos[1] + 5)
