@@ -8,7 +8,12 @@ from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.graphics.context_instructions import Color
 from kivy.graphics.vertex_instructions import Line, Mesh
-from kivy.properties import ListProperty, NumericProperty, ColorProperty
+
+from kivy.properties import (
+    ListProperty,
+    NumericProperty,
+    ObjectProperty
+)
 
 from kivy.uix.stencilview import StencilView
 from kivy.uix.widget import Widget
@@ -54,7 +59,7 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
     label_widgets = InstructionGroup()
 
-    current_domain = ListProperty()
+    current_domain = ObjectProperty()
     current_functions = ListProperty()
     on_screen_functions = dict()
 
@@ -293,6 +298,8 @@ class CartesianCoordinateSystem(StencilView, Widget):
         self.get_label(major_x_ticks, 'x')
         self.get_label(major_y_ticks, 'y')
 
+        self.draw_curve()
+
 
     def on_size(self, *args):
         self.update_plane()
@@ -348,9 +355,9 @@ class CartesianCoordinateSystem(StencilView, Widget):
             scale_factor=self.update_event, d_x=self.update_event, d_y=self.update_event
         )
 
-        self.bind(
-            current_domain=self.draw_curve
-        )
+        # self.bind(
+        #     current_domain=self.draw_curve
+        # )
 
         self.current_functions.extend(['x', 'x*x + 1'])
 
