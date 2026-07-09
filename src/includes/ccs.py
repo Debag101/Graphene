@@ -23,27 +23,9 @@ from kivy.metrics import dp
 from includes import geoshape as gs
 
 """
-    Rules:
-    1. All the work is to be done in numeric coordinates and only convert them to pixels when updating the mesh
-       Or the drawing
-
-    2. Everything will be in reference to two vars: x_min, x_max
-       x_min will denote the smallest tick on the screen
-
-    3. Panning: For panning I will store two values : dx, dy, which represent how much the user has panned the screen
-       along x and along y. for example, say x_min right now is -10, dx = 5, new x_min = -5, capiche?
-       also if dx or dy are not integers, again, for example, y_min = -6, dy = -0.3 => y_min = -6.3, we will start from -6.3
-       but obv depending on the current zoom scale, it may or maynot show up as a major tick
-
-    4. Zooming: Not sure yet but we do have to keep record of some scale amount, which will be 1x by default
-       and change the steps, x_min, based on that, not yet sure tho
-
-    5. Make sure x_min, y_min and max version are always integers
-
-    6. Unit calculation:
-        - (x_max - x_min) -> total step,
-        - log10(x_min - x_max)
-        -
+    1. geoshape is a utility module which will not directly interact with any widget or screen
+    2. geoshape functions will simply process and return coordinates of format (x, f(x)) for basic functions
+    3. All drawing stuff will be done by the ccs class
 """
 
 
@@ -72,6 +54,11 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
     label_widgets = InstructionGroup()
 
+    current_domain = ListProperty()
+    current_functions = ListProperty()
+    on_screen_functions = dict()
+
+    # Conversion and getter functions
 
     def get_origin_x(self):
         return self.x + self.width / 2 + self.d_x
@@ -100,103 +87,6 @@ class CartesianCoordinateSystem(StencilView, Widget):
         pointy = (pixel[1] - self.origin_y) / (self.major_tick_size * sf)
         return [pointx, pointy]
     
-
-    def on_touch_move(self, touch):
-
-        if not self.collide_point(*touch.pos):
-            return super().on_touch_move(touch)
-
-        self.on_panning(touch.dx, touch.dy)
-
-
-    def on_touch_down(self, touch):
-
-        if touch.is_mouse_scrolling:
-            self.handle_zoom(touch)
-
-
-    def handle_zoom(self, touch):
-        cursor_pos_before_zoom = touch.pos
-        cursor_coords_before_zoom = self.pixel_to_point(cursor_pos_before_zoom)
-
-        if touch.button not in ["scrollup", "scrolldown"]:
-            return
-
-        if touch.button == "scrollup":
-            projected_scale_factor = self.scale_factor / 1.2
-
-        if touch.button == "scrolldown":
-            projected_scale_factor = self.scale_factor * 1.2
-        
-
-        if projected_scale_factor >= 40:
-            projected_scale_factor = 40
-
-        if projected_scale_factor == 1000:
-            return
-
-        zoom_anim = Animation(scale_factor=projected_scale_factor, duration=0.15, transition='out_circ')
-
-        projected_cursor_pos = self.point_to_pixel(
-            cursor_coords_before_zoom, projected_scale_factor
-        )
-
-        pan_x = self.d_x + cursor_pos_before_zoom[0] - projected_cursor_pos[0]
-        pan_y = self.d_y + cursor_pos_before_zoom[1] - projected_cursor_pos[1]
-
-        zoom_anim &= Animation(d_x=pan_x, d_y=pan_y, duration=0.15, transition='out_circ')
-
-        zoom_anim.start(self)
-
-
-    def on_panning(self, touch_dx, touch_dy):
-        self.d_x += touch_dx
-        self.d_y += touch_dy
-
-
-    def update_min_max(self):
-        self.x_min = math.floor(
-            (self.x - self.origin_x) / (self.major_tick_size * self.scale_factor)
-        )
-        self.x_max = math.ceil(
-            (self.x + self.width - self.origin_x)
-            / (self.major_tick_size * self.scale_factor)
-        )
-
-        self.y_min = math.floor(
-            (self.y - self.origin_y) / (self.major_tick_size * self.scale_factor)
-        )
-        self.y_max = math.ceil(
-            (self.y + self.height - self.origin_y)
-            / (self.major_tick_size * self.scale_factor)
-        )
-
-        self.update_step()
-
-
-    def update_step(self):
-        step_gapx = self.x_max - self.x_min
-        log_of_step = math.log10(step_gapx)
-        base = 1
-        power = math.floor(log_of_step)
-        fractional_part = log_of_step - power
-
-        if fractional_part <= self.unit_selection_diff:
-            base = 1
-        elif (
-            self.unit_selection_diff <= fractional_part <= self.unit_selection_diff * 2
-        ):
-            base = 2
-        else:
-            base = 5
-
-        self.unit_x = base * (10 ** (power - 1))
-        self.unit_y = self.unit_x
-
-        self.unit_minor_x = self.unit_x / 5
-        self.unit_minor_y = self.unit_minor_x
-        self.precision = power
-
 
     def get_label(self, major_ticks, axis):
 
@@ -271,6 +161,143 @@ class CartesianCoordinateSystem(StencilView, Widget):
             label_texture = label.texture
             self.label_widgets.add(Rectangle(pos=label_pos, texture=label_texture, size=label_texture.size))
 
+
+    # Touch event handling functions
+
+    def on_touch_move(self, touch):
+
+        if not self.collide_point(*touch.pos):
+            return super().on_touch_move(touch)
+
+        self.on_panning(touch.dx, touch.dy)
+
+
+    def on_touch_down(self, touch):
+
+        if touch.is_mouse_scrolling:
+            self.handle_zoom(touch)
+
+
+    def handle_zoom(self, touch):
+        cursor_pos_before_zoom = touch.pos
+        cursor_coords_before_zoom = self.pixel_to_point(cursor_pos_before_zoom)
+
+        if touch.button not in ["scrollup", "scrolldown"]:
+            return
+
+        if touch.button == "scrollup":
+            projected_scale_factor = self.scale_factor / 1.2
+
+        if touch.button == "scrolldown":
+            projected_scale_factor = self.scale_factor * 1.2
+        
+
+        if projected_scale_factor >= 40:
+            projected_scale_factor = 40
+
+        if projected_scale_factor == 1000:
+            return
+
+        zoom_anim = Animation(scale_factor=projected_scale_factor, duration=0.15, transition='out_circ')
+
+        projected_cursor_pos = self.point_to_pixel(
+            cursor_coords_before_zoom, projected_scale_factor
+        )
+
+        pan_x = self.d_x + cursor_pos_before_zoom[0] - projected_cursor_pos[0]
+        pan_y = self.d_y + cursor_pos_before_zoom[1] - projected_cursor_pos[1]
+
+        zoom_anim &= Animation(d_x=pan_x, d_y=pan_y, duration=0.15, transition='out_circ')
+
+        zoom_anim.start(self)
+
+
+    def on_panning(self, touch_dx, touch_dy):
+        self.d_x += touch_dx
+        self.d_y += touch_dy
+
+    
+    # Attribute updating functions
+
+    def update_min_max(self):
+        self.x_min = math.floor(
+            (self.x - self.origin_x) / (self.major_tick_size * self.scale_factor)
+        )
+        self.x_max = math.ceil(
+            (self.x + self.width - self.origin_x)
+            / (self.major_tick_size * self.scale_factor)
+        )
+
+        self.y_min = math.floor(
+            (self.y - self.origin_y) / (self.major_tick_size * self.scale_factor)
+        )
+        self.y_max = math.ceil(
+            (self.y + self.height - self.origin_y)
+            / (self.major_tick_size * self.scale_factor)
+        )
+
+        self.update_step()
+
+
+    def update_step(self):
+        step_gapx = self.x_max - self.x_min
+        log_of_step = math.log10(step_gapx)
+        base = 1
+        power = math.floor(log_of_step)
+        fractional_part = log_of_step - power
+
+        if fractional_part <= self.unit_selection_diff:
+            base = 1
+        elif (
+            self.unit_selection_diff <= fractional_part <= self.unit_selection_diff * 2
+        ):
+            base = 2
+        else:
+            base = 5
+
+        self.unit_x = base * (10 ** (power - 1))
+        self.unit_y = self.unit_x
+
+        self.unit_minor_x = self.unit_x / 5
+        self.unit_minor_y = self.unit_minor_x
+        self.precision = power
+
+
+    def update_plane(self, *args):
+
+        self.origin_x = self.get_origin_x()
+        self.origin_y = self.get_origin_y()
+
+        self.major_tick_size = self.width / 10  # Size of one major partition
+        self.minor_tick_size = self.major_tick_size / 5
+
+        self.update_min_max()
+
+        major_x_ticks = self.get_major_x_ticks()
+        major_y_ticks = self.get_major_y_ticks()
+
+        minor_x_ticks = self.get_minor_x_ticks()
+        minor_y_ticks = self.get_minor_y_ticks()
+
+        self.x_axis.points = [self.x, self.origin_y, self.x + self.width, self.origin_y]
+        self.y_axis.points = [self.origin_x, self.y, self.origin_x, self.top]
+
+        self.current_domain = gs.generate_domain(self.x_min, self.x_max, 100)
+
+        self.init_vertical_grid(major_x_ticks)
+        self.init_horizontal_grid(major_y_ticks)
+        self.init_minor_vertical_grid(minor_x_ticks)
+        self.init_minor_horizontal_grid(minor_y_ticks)
+
+        self.label_widgets.clear()
+        self.get_label(major_x_ticks, 'x')
+        self.get_label(major_y_ticks, 'y')
+
+
+    def on_size(self, *args):
+        self.update_plane()
+
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -321,8 +348,13 @@ class CartesianCoordinateSystem(StencilView, Widget):
             scale_factor=self.update_event, d_x=self.update_event, d_y=self.update_event
         )
 
+        self.bind(
+            current_domain=self.draw_curve
+        )
+
+        self.current_functions.extend(['x', 'x*x + 1'])
+
         self.update_plane()
-        print(gs.generate_domain(self.x_min, self.x_max, 100))
 
     # Tick generating functions: Basically create the visible major ticks on the screen using x_min as ref
 
@@ -368,7 +400,7 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
         return minor_y_ticks
 
-    # Grid Drawing Functions: Draw the main grid on the screen using Meshes
+    # Drawing Functions: Draw the main grid on the screen using Meshes and also curves
 
     def init_vertical_grid(self, major_ticks):
         ver_vertices = []
@@ -380,7 +412,10 @@ class CartesianCoordinateSystem(StencilView, Widget):
                 continue
 
             pixel_x = self.point_to_pixel(interval)[0]
-            ver_vertices.extend([pixel_x, screen_top, 0, 0, pixel_x, screen_bot, 0, 0])
+            ver_vertices.extend(
+                                [pixel_x, screen_top, 0, 0,
+                                 pixel_x, screen_bot, 0, 0]
+            )
 
         total_vertices = len(ver_vertices) // 4
 
@@ -439,35 +474,35 @@ class CartesianCoordinateSystem(StencilView, Widget):
         self.minor_horizontal_grid_mesh.indices = list(range(total_vertices))
         self.minor_horizontal_grid_mesh.vertices = minor_hor_vertices
 
+    
+    def draw_curve(self, *args):
 
-    def update_plane(self, *args):
+        if not self.current_functions:
+            return
 
-        self.origin_x = self.get_origin_x()
-        self.origin_y = self.get_origin_y()
+        for function in self.current_functions:
 
-        self.major_tick_size = self.width / 10  # Size of one major partition
-        self.minor_tick_size = self.major_tick_size / 5
+            if function in self.on_screen_functions.keys():
+                function_mesh = self.on_screen_functions[function]
+            else:
+                function_mesh = Mesh(mode='lines')
+                self.canvas.add(function_mesh)
+                self.on_screen_functions.update({function : function_mesh})
 
-        self.update_min_max()
+            function_points = gs.generate_curve_points(self.current_domain, function)
+            vertices = []
 
-        major_x_ticks = self.get_major_x_ticks()
-        major_y_ticks = self.get_major_y_ticks()
+            for i in range(len(function_points) - 1):
+                current_pixel_coords = self.point_to_pixel(function_points[i])
+                next_pixel_coords = self.point_to_pixel(function_points[i+1])
 
-        minor_x_ticks = self.get_minor_x_ticks()
-        minor_y_ticks = self.get_minor_y_ticks()
+                vertices.extend([
+                        current_pixel_coords[0], current_pixel_coords[1], 0, 0,
+                        next_pixel_coords[0], next_pixel_coords[1], 0, 0          
+                    ])
+                
+            indices = list(range(len(vertices) // 4))
+            function_mesh.indices = indices
+            function_mesh.vertices = vertices
 
-        self.x_axis.points = [self.x, self.origin_y, self.x + self.width, self.origin_y]
-        self.y_axis.points = [self.origin_x, self.y, self.origin_x, self.top]
 
-        self.init_vertical_grid(major_x_ticks)
-        self.init_horizontal_grid(major_y_ticks)
-        self.init_minor_vertical_grid(minor_x_ticks)
-        self.init_minor_horizontal_grid(minor_y_ticks)
-
-        self.label_widgets.clear()
-        self.get_label(major_x_ticks, 'x')
-        self.get_label(major_y_ticks, 'y')
-        
-
-    def on_size(self, *args):
-        self.update_plane()
