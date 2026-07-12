@@ -352,14 +352,18 @@ class CartesianCoordinateSystem(StencilView, Widget):
         self.canvas.add(self.label_widgets)
 
         self.bind(
-            scale_factor=self.update_event, d_x=self.update_event, d_y=self.update_event
+            scale_factor=self.update_event,
+            d_x=self.update_event,
+            d_y=self.update_event, 
+            current_functions = self.update_event
         )
 
         # self.bind(
         #     current_domain=self.draw_curve
         # )
 
-        self.current_functions.extend(['x', 'x*x + 1'])
+        # self.current_functions.extend(['x', 'x*x + 1'])
+
 
         self.update_plane()
 
@@ -511,5 +515,4 @@ class CartesianCoordinateSystem(StencilView, Widget):
             indices = list(range(len(vertices) // 4))
             function_mesh.indices = indices
             function_mesh.vertices = vertices
-
 

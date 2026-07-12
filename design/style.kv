@@ -12,10 +12,9 @@ MDBoxLayout:
             text: 'Logo goes here'
             halign: 'center'
         
-        BoxLayout:
-            Button:
-                text: 'graph boxes go here'
-                halign: 'center'
+        TextBoxes:
+            graph_area: ccs 
+            
         
         MDLabel:
             size_hint_y: 0.2
@@ -23,3 +22,5 @@ MDBoxLayout:
             halign: 'center'
 
     CartesianCoordinateSystem:
+        id: ccs
+
