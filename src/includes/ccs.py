@@ -31,6 +31,11 @@ from includes import geoshape as gs
     1. geoshape is a utility module which will not directly interact with any widget or screen
     2. geoshape functions will simply process and return coordinates of format (x, f(x)) for basic functions
     3. All drawing stuff will be done by the ccs class
+    4. textboxes.py will strictly handle all the textbox related stuff (reading, parsing, etc...)
+    5. textboxes.py is passed an object reference to CartesianCoordinateSystem so that it can change current_functions list
+    6. The current_functions list is a list of all functions that the program has to draw. 
+    7. The on_screen_functions is a dict of the format {function : function_mesh}, function mesh is a Mesh() obj and 
+       function is basically the function string : 'x', 'x**2' etc 
 """
 
 
@@ -490,6 +495,28 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
         if not self.current_functions:
             return
+        
+        '''
+            Reason for wrapping self.on_screen_functions.keys() inside a list() : 
+
+                If we notice, there is a pop() method inside a function, if you don't know, the pop method removes
+                the key value pair with respect to the key passed to it. 
+
+                Now we are also looping through the dictionary items in real time when we use .keys() 
+                Therefore we are basically trying to remove data from a sequence while reading that same sequence
+                This gives rise to the `RuntimeError: dictionary changed size during iteration` 
+
+                hence wrapping it inside a list() makes it a list object independent from the real time dict. Thus
+                not raising any error
+        
+        '''
+        
+        for function in list(self.on_screen_functions.keys()):
+            if function not in self.current_functions:
+                function_mesh = self.on_screen_functions[function]
+                self.canvas.remove(function_mesh)
+                self.on_screen_functions.pop(function)
+
 
         for function in self.current_functions:
 
@@ -515,4 +542,7 @@ class CartesianCoordinateSystem(StencilView, Widget):
             indices = list(range(len(vertices) // 4))
             function_mesh.indices = indices
             function_mesh.vertices = vertices
+
+
+
 

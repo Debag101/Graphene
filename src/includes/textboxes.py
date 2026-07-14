@@ -10,11 +10,11 @@ class TextBoxes(BoxLayout):
 
     box_count = NumericProperty()
     ccs_obj = ObjectProperty()
+    textbox_dict = dict()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.box_count = 1
-        print(f'inside {self.ccs_obj}')
         self.draw_text_boxes()
 
 
@@ -22,20 +22,36 @@ class TextBoxes(BoxLayout):
         for _ in range(self.box_count):
             tb = TextInput(text='Enter Function',
                            multiline=False, 
-                           on_text_validate=self.on_enter)
+                           on_text_validate=self.on_enter, 
+                           size_hint_y = None)
             
-            tb.bind(text=self.on_text)
+            self.textbox_dict.update({tb: tb.text})
             self.add_widget(tb)
             
     
     def on_enter(self, textbox):
-        print('Function Entered')
-        print(self.ccs_obj)
+        old_function = self.textbox_dict[textbox]
+
+        if not old_function:
+            return 
+        
+        new_function = textbox.text
+
+        if new_function == old_function:
+            return
+        
+        if old_function != 'Enter Function':
+            self.ccs_obj.current_functions.remove(old_function)
+            
+        self.ccs_obj.current_functions.append(new_function)
+        self.textbox_dict.update({textbox: new_function})
+
+        print('here', self.ccs_obj.current_functions)
 
 
-    def on_text(self, *args):
-        # print('On Text : ', args)
-        pass
+    # def on_text(self, *args):
+    #     # print('On Text : ', args)
+    #     pass
 
     def on_size(self, *args):
         print(self.ccs_obj)
