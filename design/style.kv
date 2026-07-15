@@ -5,21 +5,52 @@ MDBoxLayout:
 
     MDBoxLayout:
         orientation: 'vertical'
-        size_hint_x: 0.2
+        size_hint_x: 0.3
 
-        MDLabel:
-            size_hint_y: 0.3
-            text: 'Logo goes here'
-            halign: 'center'
-        
+        # MDLabel:
+        #     size_hint_y: 0.3
+        #     text: 'Logo goes here'
+        #     halign: 'center'
+
+        MDBoxLayout:
+            orientation: 'horizontal'
+
+            CustomButton:
+                icon: 'plus-outline'
+                theme_font_size: "Custom"
+                font_size: "26sp"
+                pos_hint: {"center_x": 0.2, "center_y": 0.94}
+
+            Widget:
+
+            Widget:
+
+            Widget:
+
+            CustomButton:
+                icon: 'cog-outline'
+                theme_font_size: "Custom"
+                font_size: "26sp"
+                pos_hint: {"center_x": 1, "center_y": 0.94}
+
+                    
         TextBoxes:
             ccs_obj: ccs 
             
+
+        # MDIconButton:
+            # icon: "heart-outline"
+            # style: "tonal"
+            # theme_font_size: "Custom"
+            # font_size: "48sp"
+            # radius: [self.height / 2, ]
+            # size_hint: None, None
+            # size: "84dp", "84dp"
         
-        MDLabel:
-            size_hint_y: 0.2
-            text: 'settings_panel'
-            halign: 'center'
+        # MDLabel:
+        #     size_hint_y: 0.2
+        #     text: 'settings_panel'
+        #     halign: 'center'
 
     CartesianCoordinateSystem:
         id: ccs

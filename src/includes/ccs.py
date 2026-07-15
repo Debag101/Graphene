@@ -543,6 +543,3 @@ class CartesianCoordinateSystem(StencilView, Widget):
             function_mesh.indices = indices
             function_mesh.vertices = vertices
 
-
-
-

@@ -2,7 +2,7 @@ from kivy.core.window import Window
 from kivy.lang import Builder
 from kivymd.app import MDApp
 
-from includes import ccs, textboxes
+from includes import ccs, textboxes, custom_buttons
 
 
 class GrapheneApp(MDApp):
