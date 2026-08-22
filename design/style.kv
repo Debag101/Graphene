@@ -14,43 +14,38 @@ MDBoxLayout:
 
         MDBoxLayout:
             orientation: 'horizontal'
+            size_hint_y: None
+            height: "60dp"
+            padding: "20dp"
 
-            CustomButton:
+            MDIconButton:
                 icon: 'plus-outline'
-                theme_font_size: "Custom"
-                font_size: "26sp"
+                icon_size: "26sp"
                 pos_hint: {"center_x": 0.2, "center_y": 0.94}
+                on_release: text_boxes.draw_text_boxes()
 
             Widget:
 
-            Widget:
-
-            Widget:
-
-            CustomButton:
+            MDIconButton:
                 icon: 'cog-outline'
                 theme_font_size: "Custom"
                 font_size: "26sp"
                 pos_hint: {"center_x": 1, "center_y": 0.94}
 
                     
-        TextBoxes:
-            ccs_obj: ccs 
-            
+        ScrollView: 
+            do_scroll_x: False
+            do_scroll_y: True
 
-        # MDIconButton:
-            # icon: "heart-outline"
-            # style: "tonal"
-            # theme_font_size: "Custom"
-            # font_size: "48sp"
-            # radius: [self.height / 2, ]
-            # size_hint: None, None
-            # size: "84dp", "84dp"
-        
-        # MDLabel:
-        #     size_hint_y: 0.2
-        #     text: 'settings_panel'
-        #     halign: 'center'
+            TextBoxes:
+                id: text_boxes
+                ccs_obj: ccs 
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: "10dp"
+                padding: "10dp"
+
 
     CartesianCoordinateSystem:
         id: ccs

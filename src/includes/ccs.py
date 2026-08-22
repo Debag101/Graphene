@@ -1,6 +1,7 @@
 from kivy.config import Config
 
 Config.set("input", "mouse", "mouse,disable_multitouch")
+Config.set('graphics', 'multisamples', '4')
 
 import math
 
@@ -12,8 +13,11 @@ from kivy.graphics.vertex_instructions import Line, Mesh
 from kivy.properties import (
     ListProperty,
     NumericProperty,
-    ObjectProperty
+    ObjectProperty, 
+    DictProperty
 )
+
+import numpy as np
 
 from kivy.uix.stencilview import StencilView
 from kivy.uix.widget import Widget
@@ -26,6 +30,8 @@ from pathlib import Path
 from kivy.metrics import dp
 
 from includes import geoshape as gs
+
+import random
 
 """
     1. geoshape is a utility module which will not directly interact with any widget or screen
@@ -65,8 +71,10 @@ class CartesianCoordinateSystem(StencilView, Widget):
     label_widgets = InstructionGroup()
 
     current_domain = ObjectProperty()
-    current_functions = ListProperty()
+    current_functions = DictProperty()
     on_screen_functions = dict()
+
+   
 
     # Conversion and getter functions
 
@@ -83,10 +91,14 @@ class CartesianCoordinateSystem(StencilView, Widget):
         if sf == None:
             sf = self.scale_factor
 
+        if np.isnan(point[1]):
+            return
+
         pixelx = point[0] * self.major_tick_size * sf + self.origin_x
         pixely = point[1] * self.major_tick_size * sf + self.origin_y
+        
         return [round(pixelx), round(pixely)]
-    
+
 
     def pixel_to_point(self, pixel, sf=None):
 
@@ -495,51 +507,64 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
         if not self.current_functions:
             return
-        
-        '''
-            Reason for wrapping self.on_screen_functions.keys() inside a list() : 
 
-                If we notice, there is a pop() method inside a function, if you don't know, the pop method removes
-                the key value pair with respect to the key passed to it. 
-
-                Now we are also looping through the dictionary items in real time when we use .keys() 
-                Therefore we are basically trying to remove data from a sequence while reading that same sequence
-                This gives rise to the `RuntimeError: dictionary changed size during iteration` 
-
-                hence wrapping it inside a list() makes it a list object independent from the real time dict. Thus
-                not raising any error
-        
-        '''
-        
         for function in list(self.on_screen_functions.keys()):
             if function not in self.current_functions:
-                function_mesh = self.on_screen_functions[function]
-                self.canvas.remove(function_mesh)
+                line_pool, line_group = self.on_screen_functions[function]
+                self.canvas.remove(line_group)
                 self.on_screen_functions.pop(function)
+               
 
+        for function, color in self.current_functions.items():
 
-        for function in self.current_functions:
+            if function in self.on_screen_functions:
+                line_pool, line_group = self.on_screen_functions[function]
 
-            if function in self.on_screen_functions.keys():
-                function_mesh = self.on_screen_functions[function]
             else:
-                function_mesh = Mesh(mode='lines')
-                self.canvas.add(function_mesh)
-                self.on_screen_functions.update({function : function_mesh})
+                line_group = InstructionGroup()
+                line_group.add(Color(*color))
+                self.canvas.add(line_group)
 
-            function_points = gs.generate_curve_points(self.current_domain, function)
-            vertices = []
+                line_pool = [] # Pool of usable lines
+                self.on_screen_functions[function] = (line_pool, line_group)
 
-            for i in range(len(function_points) - 1):
-                current_pixel_coords = self.point_to_pixel(function_points[i])
-                next_pixel_coords = self.point_to_pixel(function_points[i+1])
+            pool_index = 0
+            current_points = []
+            dyn_threshold = self.y_max - self.y_min # Basically passing the height threshold for functions with vertical asymptotes like tan(x) at x = pi/2, 3pi/2, -pi/2 etc
+            function_points = gs.generate_curve_points(self.current_domain, function, dyn_threshold)
 
-                vertices.extend([
-                        current_pixel_coords[0], current_pixel_coords[1], 0, 0,
-                        next_pixel_coords[0], next_pixel_coords[1], 0, 0          
-                    ])
-                
-            indices = list(range(len(vertices) // 4))
-            function_mesh.indices = indices
-            function_mesh.vertices = vertices
+            for point_index in range(len(function_points)):
+                pixel_coords = self.point_to_pixel(function_points[point_index])
 
+                if not pixel_coords:
+                    if len(current_points) >= 4:
+
+                        if pool_index < len(line_pool):
+                            line_pool[pool_index].points = current_points
+
+                        else:
+                            new_line = Line(points=current_points, width=1.5)
+                            line_pool.append(new_line)
+                            line_group.add(new_line)
+
+                        pool_index += 1
+
+                    current_points = []
+                    continue
+
+                current_points.extend(pixel_coords)
+
+
+            if len(current_points) >= 4:
+                if pool_index < len(line_pool):
+                    line_pool[pool_index].points = current_points
+                else:
+                    new_line = Line(points=current_points, width=1.5)
+                    line_pool.append(new_line)
+                    line_group.add(new_line)
+
+                pool_index += 1
+
+            while pool_index < len(line_pool):
+                line_pool[pool_index].points = []
+                pool_index += 1
