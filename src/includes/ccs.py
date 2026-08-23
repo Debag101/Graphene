@@ -278,7 +278,6 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
         self.major_tick_size = self.width / 10  # Size of one major partition
         self.minor_tick_size = self.major_tick_size / 5
-
         self.update_min_max()
 
         major_x_ticks = self.get_major_x_ticks()
