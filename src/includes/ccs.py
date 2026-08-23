@@ -8,7 +8,7 @@ import math
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.graphics.context_instructions import Color
-from kivy.graphics.vertex_instructions import Line, Mesh
+from kivy.graphics.vertex_instructions import Line, Mesh, Point, Ellipse
 
 from kivy.properties import (
     ListProperty,
@@ -24,6 +24,7 @@ from kivy.uix.widget import Widget
 from kivy.core.text import Label as CoreLabel
 from kivy.graphics.vertex_instructions import Rectangle
 from kivy.graphics.instructions import InstructionGroup
+from kivy.core.window import Window
 
 from pathlib import Path
 
@@ -324,8 +325,6 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
-
         self.root_dir = Path(__file__).resolve().parents[2]
         self.font_path = str(self.root_dir / 'resources' / 'IosevkaTermNerdFont-Medium.ttf')
 
@@ -375,15 +374,33 @@ class CartesianCoordinateSystem(StencilView, Widget):
             current_functions = self.update_event
         )
 
-        # self.bind(
-        #     current_domain=self.draw_curve
-        # )
-
-        # self.current_functions.extend(['x', 'x*x + 1'])
-
+        self.tooltip_group = InstructionGroup()
+        self.canvas.add(self.tooltip_group)
+        self.active_roots = []
+        Window.bind(mouse_pos=self.on_mouse_move)
 
         self.update_plane()
 
+
+    def on_mouse_move(self, window, pos):
+        self.tooltip_group.clear()
+
+        for px, py, rx in self.active_roots:
+            if math.hypot(pos[0] - px, pos[1] - py) < dp(15):
+                self.tooltip_group.add(Color(0.2, 0.2, 0.2, 0.9))
+
+                label = CoreLabel(text=f"({rx:.3f}, 0)",
+                                  font_size=18, 
+                                  font_name=self.font_path)
+                label.refresh()
+                tex = label.texture
+
+
+                bg_pos = (px + dp(10), py + dp(10))
+                pad = dp(5)
+                self.tooltip_group.add(Rectangle(pos=bg_pos, size=(tex.size[0] + pad*2, tex.size[1] + pad*2)))
+                self.tooltip_group.add(Color(1,1,1,1))
+                self.tooltip_group.add(Rectangle(pos=(bg_pos[0] + pad, bg_pos[1] + pad), texture=tex, size=tex.size))
     # Tick generating functions: Basically create the visible major ticks on the screen using x_min as ref
 
     def get_major_x_ticks(self):
@@ -505,33 +522,41 @@ class CartesianCoordinateSystem(StencilView, Widget):
     
     def draw_curve(self, *args):
 
+        self.active_roots.clear()
+        
+        for function in list(self.on_screen_functions.keys()):
+            if function not in self.current_functions:
+                line_pool, line_group, root_group = self.on_screen_functions.pop(function)
+                self.canvas.remove(line_group)
+                self.canvas.remove(root_group)
+
         if not self.current_functions:
             return
 
-        for function in list(self.on_screen_functions.keys()):
-            if function not in self.current_functions:
-                line_pool, line_group = self.on_screen_functions[function]
-                self.canvas.remove(line_group)
-                self.on_screen_functions.pop(function)
                
 
-        for function, color in self.current_functions.items():
-
+        for function, keys in self.current_functions.items():
             if function in self.on_screen_functions:
-                line_pool, line_group = self.on_screen_functions[function]
+                line_pool, line_group, root_group = self.on_screen_functions[function]
+                root_group.clear()
 
             else:
-                line_group = InstructionGroup()
+                line_group, root_group = InstructionGroup(), InstructionGroup()
+                color = keys["color"]
                 line_group.add(Color(*color))
+                root_group.add(Color(*color))
                 self.canvas.add(line_group)
-
+                self.canvas.add(root_group)
                 line_pool = [] # Pool of usable lines
-                self.on_screen_functions[function] = (line_pool, line_group)
+                self.on_screen_functions[function] = (line_pool, line_group, root_group)
 
             pool_index = 0
             current_points = []
             dyn_threshold = self.y_max - self.y_min # Basically passing the height threshold for functions with vertical asymptotes like tan(x) at x = pi/2, 3pi/2, -pi/2 etc
-            function_points = gs.generate_curve_points(self.current_domain, function, dyn_threshold)
+            function_points, roots = gs.generate_curve_points(self.current_domain, function, keys['textbox'], dyn_threshold)
+
+            if len(function_points) == 0:
+                continue
 
             for point_index in range(len(function_points)):
                 pixel_coords = self.point_to_pixel(function_points[point_index])
@@ -568,3 +593,11 @@ class CartesianCoordinateSystem(StencilView, Widget):
             while pool_index < len(line_pool):
                 line_pool[pool_index].points = []
                 pool_index += 1
+
+            if roots:
+                for rx in roots:
+                    px_coord = self.point_to_pixel([rx, 0])
+                    if px_coord: 
+                        r_size = dp(8)
+                        root_group.add(Ellipse(pos=(px_coord[0] - r_size/2, px_coord[1] - r_size/2), size=(r_size, r_size)))
+                        self.active_roots.append((px_coord[0], px_coord[1], rx))

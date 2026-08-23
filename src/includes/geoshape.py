@@ -28,7 +28,7 @@ def clean_function_expr(expr):
     return cleaned_expr
 
 
-def generate_curve_points(domain, expr, jump_threshold=50):
+def generate_curve_points(domain, expr, tb, jump_threshold=50):
 
     cleaned_expr = clean_function_expr(expr)
     allowed_functions_copy = allowed_functions.copy()
@@ -63,13 +63,31 @@ def generate_curve_points(domain, expr, jump_threshold=50):
 
         '''
 
-
         jump_mask = np.append(np.abs(np.diff(req_range)) > jump_threshold, False)
         req_range[jump_mask] = np.nan
 
+        tb.error = False
+
+        valid_mask = ~np.isnan(req_range)
+        valid_x = domain[valid_mask]
+        valid_y = req_range[valid_mask]
+
+        roots = []
+        if len(valid_y) > 1:
+            sign_flips = np.where(np.diff(np.sign(valid_y)))[0]
+            for flip_idx in sign_flips:
+                x1, y1 = valid_x[flip_idx], valid_y[flip_idx]
+                x2, y2 = valid_x[flip_idx + 1], valid_y[flip_idx + 1]
+
+                if y2 - y1 != 0:
+                    root_x = x1 - y1 * ((x2 - x1) / (y2 - y1))
+                    roots.append(root_x)
+
         points = np.column_stack((domain, req_range))
-        return points
+
+        return points, roots
 
     except Exception as e:
         print(f"Error parsing {cleaned_expr}: {e}")
-        return np.array([])
+        tb.error = True
+        return np.array([]), []

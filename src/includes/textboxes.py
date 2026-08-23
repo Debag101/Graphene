@@ -2,6 +2,7 @@ from kivymd.uix.boxlayout import BoxLayout
 from kivymd.uix.textfield import (
     MDTextField,
     MDTextFieldLeadingIcon,
+    MDTextFieldHelperText,
 )
 from kivymd.uix.button import MDIconButton
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -14,23 +15,26 @@ from includes.ccs import CartesianCoordinateSystem as c
 from kivy.metrics import dp
 import random
 
+from includes import geoshape as gs
+import numpy as np
+
 class TextBoxes(BoxLayout):
 
     box_count = NumericProperty()
     ccs_obj = ObjectProperty()
     textbox_dict = dict()
     GRAPH_COLORS = {
-                (0.90, 0.16, 0.22, 1.0) : 0,  # Red
-                (0.12, 0.53, 0.90, 1.0) : 0,  # Blue
-                (0.13, 0.55, 0.13, 1.0) : 0,  # Forest Green
-                (1.00, 0.55, 0.00, 1.0) : 0,  # Orange
-                (0.50, 0.00, 0.50, 1.0) : 0,  # Purple
-                (0.00, 0.75, 0.75, 1.0) : 0,  # Cyan
-                (0.85, 0.10, 0.55, 1.0) : 0,  # Magenta
-                (0.60, 0.40, 0.20, 1.0) : 0,  # Brown
-                (0.00, 0.00, 0.00, 1.0) : 0,  # Black
-                (0.50, 0.50, 0.50, 1.0) : 0   # Gray
-        }
+            (0.90, 0.16, 0.22, 1.0) : 0,  # Red
+            (0.12, 0.53, 0.90, 1.0) : 0,  # Blue
+            (0.13, 0.55, 0.13, 1.0) : 0,  # Forest Green
+            (1.00, 0.55, 0.00, 1.0) : 0,  # Orange
+            (0.50, 0.00, 0.50, 1.0) : 0,  # Purple
+            (0.00, 0.75, 0.75, 1.0) : 0,  # Cyan
+            (0.85, 0.10, 0.55, 1.0) : 0,  # Magenta
+            (0.60, 0.40, 0.20, 1.0) : 0,  # Brown
+            (0.00, 0.00, 0.00, 1.0) : 0,  # Black
+            (0.50, 0.50, 0.50, 1.0) : 0   # Gray
+    }
   
 
     def __init__(self, **kwargs):
@@ -65,10 +69,15 @@ class TextBoxes(BoxLayout):
 
         textbox = MDTextField(
                 MDTextFieldLeadingIcon(icon='function'), 
+                MDTextFieldHelperText(
+                    mode="on_error", 
+                    text="Invalid Function"
+                ),
                 multiline=False, 
                 size_hint_y=None, 
                 on_text_validate=self.on_enter, 
                 mode='outlined', 
+                
         )
 
         delete_button = MDIconButton(
@@ -93,25 +102,36 @@ class TextBoxes(BoxLayout):
         if new_function == old_function:
             return
 
-        functions = self.ccs_obj.current_functions.copy()
-
-        if old_function in functions:
-            color = functions[old_function]
-            self.GRAPH_COLORS[color] -= 1
-            del functions[old_function]  
-
-
         if new_function:
-            functions[new_function] = self.textbox_dict[textbox]["color"]
+            try:
+                test_domain = gs.generate_domain(0, 10, 10)
+                pts, rts = gs.generate_curve_points(test_domain, new_function, textbox, 100)
+                
+                if len(pts) == 0:
+                    textbox.error = True
+                    textbox.focus = True
+                    return
+                    
+                textbox.error = False
+            except Exception as e:
+                
+                print(f"CRASH REPORT: {e}")
+                textbox.error = True
+                textbox.focus = True
+                return
 
-        self.ccs_obj.current_functions = functions
+        if old_function in self.ccs_obj.current_functions:
+            color = self.ccs_obj.current_functions[old_function]['color']
+            self.GRAPH_COLORS[color] -= 1
+            del self.ccs_obj.current_functions[old_function]
+        
+        if new_function:
+            self.ccs_obj.current_functions[new_function] = {"color" : self.textbox_dict[textbox]["color"], "textbox" : textbox}
+        
         self.textbox_dict[textbox]["function"] = new_function
-
+        self.ccs_obj.update_plane()
 
     def delete_box(self, rb, tb):
         tb.text = ''
         self.on_enter(tb)
         self.remove_widget(rb)
-
-    def on_size(self, *args):
-        print(self.ccs_obj)

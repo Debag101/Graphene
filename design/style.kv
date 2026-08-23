@@ -7,11 +7,6 @@ MDBoxLayout:
         orientation: 'vertical'
         size_hint_x: 0.3
 
-        # MDLabel:
-        #     size_hint_y: 0.3
-        #     text: 'Logo goes here'
-        #     halign: 'center'
-
         MDBoxLayout:
             orientation: 'horizontal'
             size_hint_y: None
@@ -20,7 +15,7 @@ MDBoxLayout:
 
             MDIconButton:
                 icon: 'plus-outline'
-                icon_size: "26sp"
+                font_size: "28sp"
                 pos_hint: {"center_x": 0.2, "center_y": 0.94}
                 on_release: text_boxes.draw_text_boxes()
 
@@ -29,7 +24,7 @@ MDBoxLayout:
             MDIconButton:
                 icon: 'cog-outline'
                 theme_font_size: "Custom"
-                font_size: "26sp"
+                font_size: "25sp"
                 pos_hint: {"center_x": 1, "center_y": 0.94}
 
                     
