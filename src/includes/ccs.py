@@ -1,5 +1,4 @@
 from kivy.config import Config
-
 Config.set("input", "mouse", "mouse,disable_multitouch")
 Config.set('graphics', 'multisamples', '4')
 
@@ -17,7 +16,6 @@ from kivy.properties import (
     DictProperty
 )
 
-import numpy as np
 
 from kivy.uix.stencilview import StencilView
 from kivy.uix.widget import Widget
@@ -25,25 +23,13 @@ from kivy.core.text import Label as CoreLabel
 from kivy.graphics.vertex_instructions import Rectangle
 from kivy.graphics.instructions import InstructionGroup
 from kivy.core.window import Window
-
-from pathlib import Path
-
 from kivy.metrics import dp
 
+import numpy as np
+from pathlib import Path
+import sys
+
 from includes import geoshape as gs
-
-import random
-
-"""
-    1. geoshape is a utility module which will not directly interact with any widget or screen
-    2. geoshape functions will simply process and return coordinates of format (x, f(x)) for basic functions
-    3. All drawing stuff will be done by the ccs class
-    4. textboxes.py will strictly handle all the textbox related stuff (reading, parsing, etc...)
-    5. textboxes.py is passed an object reference to CartesianCoordinateSystem so that it can change current_functions list
-    6. The current_functions list is a list of all functions that the program has to draw. 
-    7. The on_screen_functions is a dict of the format {function : function_mesh}, function mesh is a Mesh() obj and 
-       function is basically the function string : 'x', 'x**2' etc 
-"""
 
 
 class CartesianCoordinateSystem(StencilView, Widget):
@@ -142,7 +128,6 @@ class CartesianCoordinateSystem(StencilView, Widget):
             else:
                 label_txt = f'{int(tick[index])}'
 
-            # c = ColorProperty(colormap='black')
             c = (0, 0, 0, 1)
             
             if axis == 'y':
@@ -325,8 +310,13 @@ class CartesianCoordinateSystem(StencilView, Widget):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.root_dir = Path(__file__).resolve().parents[2]
-        self.font_path = str(self.root_dir / 'resources' / 'IosevkaTermNerdFont-Medium.ttf')
+        if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            base_path = Path(sys._MEIPASS)
+            self.font_path = str(base_path / 'resrouces' / 'IosevkaTermNerdFont-Medium.ttf')
+
+        else:
+            self.root_dir = Path(__file__).resolve().parents[2]
+            self.font_path = str(self.root_dir / 'resources' / 'IosevkaTermNerdFont-Medium.ttf')
 
         self.scale_factor = 1
 
@@ -360,7 +350,6 @@ class CartesianCoordinateSystem(StencilView, Widget):
         self.canvas.add(self.minor_vertical_grid_mesh)
         self.canvas.add(self.minor_horizontal_grid_mesh)
 
-        # Invert color for black -> white
         self.canvas.add(Color(0, 0, 0, 1))
         self.canvas.add(self.x_axis)
         self.canvas.add(self.y_axis)
@@ -523,7 +512,7 @@ class CartesianCoordinateSystem(StencilView, Widget):
     def draw_curve(self, *args):
 
         self.active_roots.clear()
-        
+
         for function in list(self.on_screen_functions.keys()):
             if function not in self.current_functions:
                 line_pool, line_group, root_group = self.on_screen_functions.pop(function)
