@@ -16,7 +16,7 @@ An attempt at a Desmos "inspired" amateur graphing calculator made using Kivy.
 - Pip: `Pip` is needed to handle and install kivy's dependencies
 - Graphics: Need a GPU with atleast `OpenGL (ES) 2.0+` drives to render the UI. For `Non GPU` users you can use the `ANGLE` backend for Windows or the `Mesa 3D` for Linux 
 
-[!WARNING]
+>[!NOTE]
 It is recommended to run the program on Windows over Linux as some features such as panning and zooming may not work as intended. 
 
 
@@ -45,7 +45,7 @@ It is recommended to run the program on Windows over Linux as some features such
 
 2 **Running the exe:**
 
-[!WARNING]
+>[!WARNING]
 It is recommended to use method 1, compiling it directly on your machine as the exe may or may not work as intended. 
 
 - Navigate to the releases page
